@@ -1,0 +1,67 @@
+#!/bin/bash
+
+FLUME_HOME=$(cd "$(dirname "$0")/.."; pwd)
+agent_name=$1
+pid=.${agent_name}.pid
+FLUME_ZK_CONN_STR=
+FLUME_ZK_PATH=/flume
+# e.g. redisPwd$$$redisurl
+FLUME_REDIS_CONN_STR=
+# e.g. mongodb://user:password@hostname:port/db.collection
+FLUME_STAT_MONGO=
+FLUME_OTHER_STR=
+
+if [ -r ${FLUME_HOME}/conf/zookeeper.cfg ]; then
+  FLUME_ZK_CONN_STR=`cat ${FLUME_HOME}/conf/zookeeper.cfg | sed -n '/^[^\#]/p' | sed '/^[[:space:]]*$/d'`
+fi
+
+if [ -r ${FLUME_HOME}/conf/redis.cfg ]; then
+  FLUME_REDIS_CONN_STR=`cat ${FLUME_HOME}/conf/redis.cfg | sed -n '/^[^\#]/p' | sed '/^[[:space:]]*$/d'`
+  FLUME_OTHER_STR="${FLUME_OTHER_STR} -r ${FLUME_REDIS_CONN_STR} "
+fi
+
+if [ -r ${FLUME_HOME}/conf/mongodb.cfg ]; then
+  FLUME_STAT_MONGO=`cat ${FLUME_HOME}/conf/mongodb.cfg | sed -n '/^[^\#]/p' | sed '/^[[:space:]]*$/d'`
+  FLUME_OTHER_STR="${FLUME_OTHER_STR} -m ${FLUME_STAT_MONGO} "
+fi
+
+display_help(){
+  cat <<EOF
+    Usage: bin/start-flume-agent agentname
+    Description: agent_name must be unique,and shuld be one to one correspondence with the file name in conf
+    zk tree:/flume
+                  /agent1
+                        /conf
+                        /error
+                        /time
+                            /logs
+                            /stat
+                                 / 类型
+                  /agent2
+EOF
+}
+
+if [ $# -lt 1 ] ; then
+  display_help
+  exit 1
+fi
+
+if [ ! -e ${FLUME_HOME} ]; then
+  echo "set FLUME_HOME first."
+  exit 1
+fi
+
+if [ ! -e ${FLUME_HOME}/tmp ]; then
+  mkdir ${FLUME_HOME}/tmp
+fi
+
+if [ -n "${FLUME_ZK_CONN_STR}" ]; then
+  nohup sh ${FLUME_HOME}/bin/flume-ng agent -n $agent_name -c ${FLUME_HOME}/conf -z ${FLUME_ZK_CONN_STR} -p ${FLUME_ZK_PATH} ${FLUME_OTHER_STR} > ${FLUME_HOME}/logs/${agent_name}.log 2>&1 &
+elif [ -r ${FLUME_HOME}/conf/${agent_name}.cfg ]; then
+  nohup sh ${FLUME_HOME}/bin/flume-ng agent -n $agent_name -c ${FLUME_HOME}/conf -f ${FLUME_HOME}/conf/${agent_name}.cfg ${FLUME_OTHER_STR} > ${FLUME_HOME}/logs/${agent_name}.log 2>&1 &
+else
+  echo "no conf file exist."
+  exit 1
+fi
+
+echo $! > ${FLUME_HOME}/tmp/${pid}
