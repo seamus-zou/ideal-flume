@@ -312,6 +312,12 @@ public class Application {
         DynamicEnum.addEnum(
                 org.apache.flume.conf.sink.SinkConfiguration.SinkConfigurationType.class,
                 "IDEAL-IPTV-SINK", notExistsConfigClass);
+        
+        DynamicEnum.addEnum(org.apache.flume.conf.sink.SinkType.class, "IDEAL-KV-SINK",
+        		com.ideal.flume.sink.kv.KVSink.class.getName());
+        DynamicEnum.addEnum(
+                org.apache.flume.conf.sink.SinkConfiguration.SinkConfigurationType.class,
+                "IDEAL-KV-SINK", notExistsConfigClass);
 
         // source
         DynamicEnum.addEnum(org.apache.flume.conf.source.SourceType.class, "IDEAL-CAP",
